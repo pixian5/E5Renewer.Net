@@ -6,6 +6,22 @@
 # dotenv files
 .env
 
+# macOS / Finder
+.DS_Store
+._*
+
+# Editor / IDE junk
+.idea/
+.vscode/
+*.swp
+*.swo
+*.orig
+
+# Common temp / cache
+tmp/
+temp/
+.cache/
+
 # User-specific files
 *.rsuser
 *.suo
@@ -24,6 +40,9 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+publish/
+artifacts/
+out/
 x64/
 x86/
 [Ww][Ii][Nn]32/
@@ -63,7 +82,6 @@ BenchmarkDotNet.Artifacts/
 # .NET
 project.lock.json
 project.fragment.lock.json
-artifacts/
 
 # Tye
 .tye/
