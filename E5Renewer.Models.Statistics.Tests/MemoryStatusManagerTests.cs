@@ -36,6 +36,13 @@ public class MemoryStatusManagerTests
         Assert.AreEqual(0, count);
     }
 
+    [TestMethod]
+    public async Task TestGetStoppedUsersAsync()
+    {
+        IEnumerable<string> stoppedUsers = await this.manager.GetStoppedUsersAsync();
+        Assert.AreEqual(0, stoppedUsers.Count());
+    }
+
     /// <summary>Test
     /// <see cref="MemoryStatusManager.SetUserStatusAsync"/>
     /// </summary>
@@ -69,5 +76,32 @@ public class MemoryStatusManagerTests
     public async Task TestSetResultAsync()
     {
         await this.manager.SetResultAsync("test", "Test.Example.Set", "Success");
+    }
+
+    /// <summary>Test
+    /// <see cref="MemoryStatusManager.GetUserResultSummaryAsync"/>
+    /// </summary>
+    [TestMethod]
+    public async Task TestGetUserResultSummaryAsync()
+    {
+        await this.manager.SetResultAsync("test", "Graph.Users", "200 - OK");
+        await this.manager.SetResultAsync("test", "Graph.Files", "403 - Forbidden");
+        await this.manager.SetResultAsync("test", "Graph.Mail", "500 - Error");
+
+        (int successCount, int failureCount) = await this.manager.GetUserResultSummaryAsync("test");
+
+        Assert.AreEqual(1, successCount);
+        Assert.AreEqual(2, failureCount);
+    }
+
+    [TestMethod]
+    public async Task TestSetUserStoppedAsync()
+    {
+        await this.manager.SetUserStoppedAsync("test", true);
+        Assert.IsTrue(await this.manager.IsUserStoppedAsync("test"));
+        Assert.AreEqual(1, (await this.manager.GetStoppedUsersAsync()).Count());
+
+        await this.manager.SetUserStoppedAsync("test", false);
+        Assert.IsFalse(await this.manager.IsUserStoppedAsync("test"));
     }
 }

@@ -51,6 +51,13 @@ namespace E5Renewer.Models.BackgroundServices
         {
             while (!token.IsCancellationRequested && user.valid)
             {
+                if (await this.statusManager.IsUserStoppedAsync(user.name))
+                {
+                    await this.statusManager.SetUserStatusAsync(user.name, false);
+                    await Task.Delay(TimeSpan.FromSeconds(1), token);
+                    continue;
+                }
+
                 bool enabled = user.timeToStart == TimeSpan.Zero;
                 await this.statusManager.SetUserStatusAsync(user.name, enabled);
                 if (enabled)

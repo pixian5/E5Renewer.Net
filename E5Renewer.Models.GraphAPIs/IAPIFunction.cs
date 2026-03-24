@@ -29,29 +29,52 @@ public interface IAPIFunction : IModule
     /// <remarks>Errors will be handed correctly here.</remarks>
     internal async Task<APICallResult> SafeCallAsync(GraphServiceClient client, string user)
     {
+        static string BuildFailureToken(string code, string? message)
+        {
+            string normalizedMessage = message ?? string.Empty;
+            string? reason = normalizedMessage switch
+            {
+                _ when normalizedMessage.Contains("No method match route template", StringComparison.OrdinalIgnoreCase) => "NoMethodMatchRouteTemplate",
+                _ when normalizedMessage.Contains("singleton/navigation/$count", StringComparison.OrdinalIgnoreCase) => "UnsupportedCountRoute",
+                _ when normalizedMessage.Contains("Direct queries to this resource type are not supported", StringComparison.OrdinalIgnoreCase) => "DirectQueriesNotSupported",
+                _ when normalizedMessage.Contains("Differential query is not supported", StringComparison.OrdinalIgnoreCase) => "DifferentialQueryNotSupported",
+                _ when normalizedMessage.Contains("Change tracking is not supported", StringComparison.OrdinalIgnoreCase) => "ChangeTrackingNotSupported",
+                _ when normalizedMessage.Contains("Searches against this resource are not supported", StringComparison.OrdinalIgnoreCase) => "SearchNotSupported",
+                _ when normalizedMessage.Contains("ProviderNotSupported", StringComparison.OrdinalIgnoreCase) => "ProviderNotSupported",
+                _ when normalizedMessage.Contains("Request path is not supported", StringComparison.OrdinalIgnoreCase) => "RequestPathNotSupported",
+                _ when normalizedMessage.Contains("cpim.windows.net", StringComparison.OrdinalIgnoreCase) => "LegacyCpimEndpoint",
+                _ when normalizedMessage.Contains("syncfabric.windowsazure.com", StringComparison.OrdinalIgnoreCase) => "LegacySyncfabricEndpoint",
+                _ when normalizedMessage.Contains("identitygovernance.azure.com", StringComparison.OrdinalIgnoreCase) => "LegacyIdentityGovernanceEndpoint",
+                _ => null,
+            };
+
+            return string.IsNullOrWhiteSpace(reason) ? code : $"{code}|{reason}";
+        }
+
         object? resultRaw;
-        this.logger.LogInformation("Calling for user {0}...", user);
+        this.logger.LogInformation("Microsoft Graph 请求开始: user={0}, api={1}", user, this.id);
         try
         {
             resultRaw = await this.CallAsync(client);
             this.logger.LogDebug("{0} is {1}", nameof(resultRaw), resultRaw);
+            string resultType = resultRaw?.GetType().Name ?? "null";
+            this.logger.LogInformation("Microsoft Graph 请求成功: user={0}, api={1}, status=200, code=OK, resultType={2}", user, this.id, resultType);
             return new(rawResult: resultRaw);
         }
         catch (ODataError oe)
         {
-            this.logger.LogError("Failed to send request.");
-            this.logger.LogDebug("The error message is `{0}`", oe.Message);
+            int statusCode = oe.ResponseStatusCode;
+            string code = oe.Error?.Code ?? "ERROR";
+            this.logger.LogError("Microsoft Graph 请求失败: user={0}, api={1}, status={2}, code={3}, message={4}", user, this.id, statusCode, code, oe.Message);
             return new(
-                oe.ResponseStatusCode,
-                oe.Error?.Code ?? "ERROR"
+                statusCode,
+                BuildFailureToken(code, oe.Message)
             );
         }
         catch (Exception ex)
         {
-            this.logger.LogError("Failed to call implementation.");
-            this.logger.LogDebug("The error message is `{0}`", ex.Message);
+            this.logger.LogError("Microsoft Graph 请求失败: user={0}, api={1}, status=-1, code=ERROR, message={2}", user, this.id, ex.Message);
             return APICallResult.errorResult;
         }
     }
 }
-
